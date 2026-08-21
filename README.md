@@ -32,6 +32,7 @@ I have kept the original structure of the questions. The repository has been spl
 * [Snippets](sections/snippets.md)
 * [Bill Gates Style](sections/billgates.md)
 * [Artificial Intelligence](sections/ai.md)
+* [Agentic Workflows & Tool Calling](sections/agents.md)
 
 ## Contributing
 Since many of these questions are open-ended (e.g., "What makes a good language good?"), my answers represent my own experience and perspective. 
@@ -311,6 +312,24 @@ If you have a different approach, a better code example, or want to add nuance t
   * [Continuous Evaluation](sections/ai.md#continuous-evaluation)
   * [Fine-Tuning Trade-offs](sections/ai.md#fine-tuning-trade-offs)
   * [Scalable Production RAG Architecture](sections/ai.md#scalable-production-rag-architecture)
+
+* [Questions about Agentic Workflows & Tool Calling](sections/agents.md)
+  * [Agentic vs. Traditional AI](sections/agents.md#agentic-vs-traditional-ai)
+  * [The Model Context Protocol (MCP)](sections/agents.md#the-model-context-protocol-mcp)
+  * [Tool Calling Security & Multi-Tenancy](sections/agents.md#tool-calling-security--multi-tenancy)
+  * [Infinite Loops & Circuit Breakers](sections/agents.md#infinite-loops--circuit-breakers)
+  * [Human-in-the-Loop (HITL) Execution](sections/agents.md#human-in-the-loop-hitl-execution)
+  * [Multi-Agent Routing](sections/agents.md#multi-agent-routing-supervisor-vs-decentralized)
+  * [Production Observability](sections/agents.md#production-observability-tracing-agent-spans)
+  * [Task Decomposition](sections/agents.md#task-decomposition)
+  * [The Mechanics of Tool Calling](sections/agents.md#the-mechanics-of-tool-calling)
+  * [Handling Tool Failures](sections/agents.md#handling-tool-failures)
+  * [Schema Enforcement](sections/agents.md#schema-enforcement)
+  * [Context Bloat & Memory Bloat](sections/agents.md#context-bloat--memory-bloat)
+  * [State Machine Persistence](sections/agents.md#state-machine-persistence)
+  * [Code Sandboxing](sections/agents.md#code-sandboxing)
+  * [Agent Evaluation](sections/agents.md#agent-evaluation)
+  * [Latency & Cost Mitigation](sections/agents.md#latency--cost-mitigation)
 
 ## License
 
