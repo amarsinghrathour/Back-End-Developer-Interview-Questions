@@ -329,7 +329,7 @@ If you have a different approach, a better code example, or want to add nuance t
   * [State Machine Persistence](sections/agents.md#state-machine-persistence)
   * [Code Sandboxing](sections/agents.md#code-sandboxing)
   * [Agent Evaluation](sections/agents.md#agent-evaluation)
-  * [Latency & Cost Mitigation](sections/agents.md#latency--cost-mitigation)
+  * [API Resiliency & Fallbacks](sections/agents.md#api-resiliency--fallbacks)
 
 ## License
 
