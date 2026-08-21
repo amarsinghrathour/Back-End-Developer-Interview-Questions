@@ -169,3 +169,67 @@ type CommentRow struct {
     Text      string
 }
 ```
+
+#### Vector Databases (AI & LLMs)
+> What are Vector Databases, and how do they differ from traditional NoSQL document stores?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Vector databases store and query high-dimensional data (embeddings) based on semantic similarity rather than exact keyword matches, making them essential for AI applications.
+
+**The Deep Dive:** 
+Traditional NoSQL databases (like MongoDB or Redis) retrieve data based on exact matches or simple range queries on structured keys. In the era of LLMs, data (text, images, audio) is converted into mathematical vectors (embeddings) representing meaning. A Vector Database (like Pinecone, Milvus, or Qdrant) uses algorithms like HNSW (Hierarchical Navigable Small World) to perform Approximate Nearest Neighbor (ANN) searches. If you search for "happy dog", it will find vectors close to it in multi-dimensional space, returning "joyful puppy", which a traditional NoSQL keyword search would completely miss.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Enables semantic search, RAG (Retrieval-Augmented Generation) for LLMs, and powerful recommendation engines.
+* **Cons:** High computational cost to generate embeddings; ANN queries are computationally heavy and approximate, meaning you sacrifice 100% precision for speed.
+
+
+#### Single-Table Design (DynamoDB)
+> What is Single-Table Design, and why is it often preferred in systems like DynamoDB?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Single-Table Design involves putting all entities of an application into one massive NoSQL table, using overloaded Partition and Sort keys to pre-join data and optimize for O(1) read performance.
+
+**The Deep Dive:** 
+In SQL, you normalize data into `Users`, `Orders`, and `Items` tables, joining them at read time. In DynamoDB, JOINs do not exist, and multiple network requests to fetch relational data are slow. Single-Table Design solves this by forcing you to design your database around your access patterns *before* writing any code. You create a single table where `PK` (Partition Key) might be `USER#123` and `SK` (Sort Key) might be `PROFILE` or `ORDER#456`. A single query to `PK=USER#123` instantly returns the user's profile and all their orders in a single, blazing-fast network request.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Unmatched, predictable single-digit millisecond latency at any scale.
+* **Cons:** Extremely inflexible. If product requirements change and introduce a new access pattern you didn't model for, you often have to rebuild the entire table structure.
+
+
+#### Graph Databases
+> When should you choose a Graph Database over a Document Database?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Choose a Graph Database when the *relationships* between data points are more complex and valuable than the data points themselves.
+
+**The Deep Dive:** 
+Document databases (MongoDB) are great for self-contained aggregates (e.g., a Blog Post and its comments). However, querying deeply connected data (e.g., "Find all friends of friends who live in London and like Pizza") requires writing complex application-level JOIN logic that slows to a crawl at scale. Graph databases (like Neo4j) store data as Nodes (Entities) and Edges (Relationships). Traversing millions of relationships is an O(1) pointer-hop operation, making them the standard for social networks, fraud detection rings, and recommendation engines.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Blazing fast for highly connected, deeply nested relationship queries.
+* **Cons:** Difficult to shard horizontally; steep learning curve for query languages like Cypher or Gremlin.
+
+
+#### Time-Series Databases
+> Why use a purpose-built Time-Series Database instead of a standard Key-Value or Columnar NoSQL store?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Time-Series Databases are hyper-optimized for high-volume, append-only timestamped data, offering automatic data retention policies and built-in aggregation functions.
+
+**The Deep Dive:** 
+When ingesting IoT sensor data, stock ticks, or server metrics, you are writing millions of data points a second, always ordered by time. While you *could* use Cassandra or DynamoDB, a dedicated Time-Series Database (like InfluxDB or TimescaleDB) provides specialized features. They automatically compress older data (downsampling), execute continuous queries (e.g., automatically averaging 1-second ticks into 1-minute blocks), and seamlessly drop expired data via TTL (Time-To-Live) partitions. Standard NoSQL databases require you to build all of this maintenance logic manually in your application layer.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Unmatched write-throughput for timestamped data; minimal storage footprint due to specialized compression algorithms.
+* **Cons:** Generally poor performance for random reads/updates or deleting specific historical records.
+

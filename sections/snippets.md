@@ -310,3 +310,86 @@ func ExecuteOperations() error {
     return nil // Happy path is at the bottom!
 }
 ```
+
+
+#### Infrastructure as Code (Terraform)
+> How do you define a reproducible cloud infrastructure using Terraform?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Terraform uses declarative HCL (HashiCorp Configuration Language) to define the exact desired state of the cloud architecture, which it then safely applies via API calls.
+
+**The Deep Dive:** 
+Clicking around the AWS Console to create servers leads to "ClickOps"—unreproducible, undocumented infrastructure. Terraform allows you to version-control your data centers.
+```hcl
+resource "aws_instance" "web" {
+  ami           = "ami-0c55b159cbfafe1f0"
+  instance_type = "t3.micro"
+
+  tags = {
+    Name = "HelloWorld"
+    Environment = "Production"
+  }
+}
+```
+When you run `terraform apply`, it calculates a "diff" between what exists in AWS and what is in the file, and only makes the exact API calls necessary to bridge the gap.
+
+#### Docker Multi-Stage Builds
+> How do you write a Dockerfile that compiles a Go binary without shipping the 500MB compiler to production?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+By using a Multi-Stage Dockerfile, where the first stage compiles the code, and the second stage copies *only* the final binary into a tiny, empty Alpine/Scratch image.
+
+**The Deep Dive:** 
+```dockerfile
+# Stage 1: Build the binary (Large Image)
+FROM golang:1.20 AS builder
+WORKDIR /app
+COPY . .
+RUN go build -o myapp main.go
+
+# Stage 2: Production runtime (Tiny Image)
+FROM alpine:latest
+WORKDIR /root/
+# Only copy the compiled binary from Stage 1
+COPY --from=builder /app/myapp .
+CMD ["./myapp"]
+```
+This pattern drops the production image size from 800MB down to 15MB, making deployments infinitely faster and massively reducing the security attack surface (no shell or compiler exists in production).
+
+#### CI/CD Pipeline (GitHub Actions)
+> What does a modern YAML pipeline look like for testing and deploying a backend service?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+A modern pipeline defines triggers (on push to main), jobs (lint, test, build), and explicit steps to execute the CI process automatically.
+
+**The Deep Dive:** 
+```yaml
+name: Node.js CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Node.js 18
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+    - run: npm ci
+    - run: npm run lint
+    - run: npm test
+```
+This ensures that no human can merge code without the automated test suite passing in a pristine, reproducible environment.

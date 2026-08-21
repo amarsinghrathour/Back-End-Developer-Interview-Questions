@@ -135,3 +135,67 @@ Git, on the other hand, tracks *content snapshots*. When Git performs a merge, i
 # Merging them will automatically apply the changes to account.go!
 git merge branch-b
 ```
+
+
+#### Monorepos vs Polyrepos
+> Why are massive tech companies shifting back to Monorepos, and what tools enable this?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Monorepos simplify dependency management and cross-project refactoring, made possible by modern intelligent build systems like Bazel, Nx, or Turborepo.
+
+**The Deep Dive:** 
+In a Polyrepo (many repos) setup, if you update a shared UI library, you must publish a new version, then go to 50 different microservice repos, update their `package.json`, and run CI 50 times. In a Monorepo, the UI library and all 50 microservices live in one repository. A single PR updates the library and instantly runs integration tests against all 50 services. However, running CI on millions of lines of code is slow. Tools like Bazel solve this by using advanced dependency graphs to only rebuild and retest the exact specific microservices affected by the changed library.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Atomic commits across services; single source of truth; prevents "dependency hell."
+* **Cons:** Requires a dedicated Platform team to maintain the complex build tooling; scaling Git performance on a 50GB repository is incredibly difficult.
+
+#### GitOps
+> What is GitOps and how does it change infrastructure deployment?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+GitOps uses Git as the single source of truth for declarative infrastructure and applications, automatically deploying whatever is in the `main` branch to production via pull mechanisms.
+
+**The Deep Dive:** 
+Traditionally, CI pipelines *push* code to servers (e.g., Jenkins running `kubectl apply`). In GitOps (using tools like ArgoCD or Flux), an agent runs *inside* the Kubernetes cluster. The agent constantly monitors the Git repository. When a PR is merged updating a YAML file from `v1` to `v2`, the agent notices the drift, pulls the new configuration, and applies it to the cluster. If an engineer manually changes a server config, the GitOps agent instantly overwrites it back to whatever Git says it should be.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Complete audit trail via Git history; trivial rollbacks (just `git revert`); prevents configuration drift.
+* **Cons:** Steep learning curve; managing secrets (passwords) in Git requires complex encryption workflows (like SealedSecrets).
+
+#### Feature Flags vs Feature Branches
+> Why are teams moving away from long-lived feature branches toward Feature Flags?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Long-lived branches cause massive merge conflicts; Feature Flags allow developers to merge incomplete code into `main` daily without exposing the broken feature to users.
+
+**The Deep Dive:** 
+If two teams work on separate branches for a month, merging them together will be a bloody nightmare of conflicts. Trunk-Based Development dictates that developers merge to `main` at least once a day. To prevent shipping half-finished features, the code is wrapped in an `if (FeatureFlag.isEnabled("new-checkout"))` block. The code sits dormant in production. Once the feature is fully complete and tested, a product manager flips the flag in a dashboard (like LaunchDarkly), instantly turning the feature on for users without requiring a deployment.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Eliminates merge conflicts; enables A/B testing; allows instant rollbacks if a feature causes a bug.
+* **Cons:** Codebase becomes littered with `if/else` statements; requires rigorous discipline to delete old flags (technical debt).
+
+#### Managing Huge Git Repositories
+> How do you handle Git performance when a repository grows to hundreds of gigabytes?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+By utilizing Git LFS for binaries, Sparse Checkout to limit working directories, and Shallow Clones to ignore ancient history.
+
+**The Deep Dive:** 
+Git fundamentally downloads the entire history of every file. If game developers commit 500MB texture files, the repo balloons, and a simple `git status` takes 10 seconds. 
+1. **Git LFS (Large File Storage):** Replaces large files in Git with text pointers, storing the actual binaries on a remote server.
+2. **Sparse Checkout:** Allows a developer to check out only the specific folder they are working on (e.g., `services/auth`) while ignoring the other 99% of the repo.
+3. **Scalar / VFS for Git:** Microsoft-developed tools that virtualize the file system, only downloading files from the server the exact moment you try to open them.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Keeps developers productive in massive codebases.
+* **Cons:** High operational overhead to train developers on these advanced Git workflows.

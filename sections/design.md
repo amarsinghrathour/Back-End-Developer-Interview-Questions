@@ -359,3 +359,71 @@ func CheckStatus(db DBInterface) string {
     // Can pass a mock DB in tests!
 }
 ```
+
+
+#### API Gateway vs Service Mesh
+> When should you use an API Gateway, and when should you use a Service Mesh like Istio/Envoy?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+An API Gateway manages North-South traffic (from the internet into your cluster), while a Service Mesh manages East-West traffic (internal service-to-service communication).
+
+**The Deep Dive:** 
+An API Gateway (like Kong or AWS API Gateway) is the front door. It handles rate limiting, user authentication (JWT validation), and SSL termination for external clients (Mobile/Web). 
+A Service Mesh is deployed as a "sidecar" proxy alongside every internal microservice. It handles internal complexities that you don't want to code into every app: mutual TLS (mTLS) between services, internal retries, circuit breaking, and distributed tracing. You usually need both: the Gateway handles the messy outside world, and the Mesh secures the internal network.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Complete separation of infrastructure concerns (networking/security) from business logic.
+* **Cons:** Service Meshes are notoriously difficult to configure and add a slight latency overhead to every internal network hop.
+
+#### Hexagonal Architecture (Ports & Adapters)
+> Why are modern backend systems moving toward Hexagonal (Clean) Architecture?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+It isolates the core business logic from external frameworks, databases, and UI, making the application infinitely more testable and adaptable.
+
+**The Deep Dive:** 
+In traditional layered architecture, the business logic often depends directly on the database layer (e.g., calling SQL directly). If you change databases, the business logic breaks. Hexagonal Architecture inverses this. The core Domain has no dependencies. It defines "Ports" (interfaces). The database is just an "Adapter" that plugs into the port. 
+This means you can test 100% of your business logic in milliseconds by plugging in an In-Memory Adapter, without ever booting up a real database or HTTP server.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Blazing fast unit tests; prevents vendor lock-in.
+* **Cons:** Requires writing significant boilerplate code (interfaces and mappers) for even simple CRUD operations.
+
+#### Event Sourcing
+> What is Event Sourcing, and why is it used in financial or auditing systems?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Instead of storing the current state of an entity, Event Sourcing stores every single state-changing event in an immutable, append-only log. The current state is calculated by replaying the events.
+
+**The Deep Dive:** 
+If a user's bank balance is $100, traditional databases just store `balance: 100`. If there's a bug, you have no idea how it got to $100. In Event Sourcing, the database stores: `AccountCreated($0) -> Deposited($150) -> Withdrew($50)`. 
+To get the balance, you sum the events. If a bug occurs, you have a perfect audit trail. You can also "time travel" by replaying the events up to a specific date to see the exact system state at that moment in time.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Perfect auditability; naturally supports CQRS and event-driven architectures.
+* **Cons:** Querying the current state requires replaying events, which is slow (mitigated by "Snapshots"); schema evolution of historical events is painful.
+
+#### Strangler Fig Pattern
+> How do you safely migrate a legacy monolith to microservices using the Strangler Fig Pattern?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+You place a proxy in front of the monolith, build new features as microservices, and slowly route traffic to the new services until the monolith dies.
+
+**The Deep Dive:** 
+"Big Bang" rewrites (shutting down development for a year to rewrite everything) almost always fail. The Strangler Pattern mitigates this risk. 
+1. Put an API Gateway in front of the monolith. All traffic goes to the monolith.
+2. Build the new `BillingService`.
+3. Configure the API Gateway to route `/billing` traffic to the new service, and everything else to the monolith.
+4. Repeat for every domain. Over time, the new services "strangle" the monolith until it handles zero traffic and can be safely deleted.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Incremental, low-risk migration; allows delivering business value continuously during the rewrite.
+* **Cons:** For a long time, you must maintain both the legacy and the new system, often requiring messy data synchronization between the old and new databases.

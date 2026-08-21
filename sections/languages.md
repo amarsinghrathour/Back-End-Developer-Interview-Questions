@@ -408,3 +408,65 @@ func main() {
     }
 }
 ```
+
+
+#### Memory Safety & Rust
+> Why are major tech companies rewriting core infrastructure in Rust instead of C++?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Rust guarantees memory safety at compile-time without using a slow Garbage Collector, eliminating entire classes of security vulnerabilities (like buffer overflows).
+
+**The Deep Dive:** 
+For 40 years, C and C++ dominated systems programming because they are fast. However, Microsoft and Google report that ~70% of all severe security vulnerabilities are memory safety issues (use-after-free, double-free) caused by manual memory management. 
+Rust introduces the "Borrow Checker," a compiler feature that strictly enforces data ownership rules. If you write memory-unsafe code, the program simply refuses to compile. This allows developers to write blazing-fast, concurrent systems software with the security guarantees of a high-level language like Java.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Unmatched performance and security; fearless concurrency (prevents data races).
+* **Cons:** Extremely steep learning curve; fighting the borrow checker slows down initial development velocity.
+
+#### TypeScript & Type Safety in Dynamic Languages
+> Why has the industry overwhelmingly shifted from plain JavaScript to TypeScript?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Because large-scale codebases written in dynamic languages become impossible to maintain safely; static typing catches trivial bugs at compile time instead of in production.
+
+**The Deep Dive:** 
+In plain JavaScript, passing a string to a function that expects an array will crash the application at runtime (often in production). As applications scale to hundreds of developers, maintaining mental models of every object's shape is impossible. TypeScript adds a static type layer. It provides world-class IDE autocompletion, serves as self-documenting code, and catches type errors before the code is even run. Python has followed the exact same trend with Type Hints and MyPy.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Drastically reduces runtime errors; makes refactoring massive codebases safe and easy.
+* **Cons:** Requires a build step (transpilation); type definitions can become overly complex ("type gymnastics") and hard to read.
+
+#### WebAssembly (Wasm)
+> How is WebAssembly changing the landscape of programming languages for the web?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+WebAssembly allows languages like C++, Rust, Go, and C# to run directly in the web browser at near-native speeds, breaking JavaScript's monopoly on frontend development.
+
+**The Deep Dive:** 
+Historically, if you wanted logic to run in the browser, you had to write it in JavaScript. Heavy computations (like video editing or 3D gaming) were too slow. WebAssembly is a low-level binary instruction format. You write code in Rust, compile it to `.wasm`, and the browser executes it at near-native CPU speeds. This has enabled full-blown applications (like Figma or Photoshop) to run smoothly in the browser, and has birthed frameworks like Blazor, allowing C# devs to write interactive web UIs without touching JS.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Incredible performance for heavy computation; code reuse (run the exact same C++ logic on the server and the browser).
+* **Cons:** Cannot directly manipulate the DOM (must bridge through JavaScript, causing latency); larger payload sizes than minified JS.
+
+#### The Rise of Go (Golang) for Backend Systems
+> Why has Go become the de facto language for cloud infrastructure and microservices?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Go was designed by Google to optimize for fast compilation, static typing, brutal simplicity, and massive concurrency, making it perfect for networking and cloud tooling.
+
+**The Deep Dive:** 
+Languages like Java require heavy JVMs and massive memory footprints, making them expensive to run in containers. Languages like Python are lightweight but struggle with true concurrency (the GIL) and type safety. Go provides a single, statically compiled binary that starts instantly and uses minimal RAM. Its lightweight "goroutines" allow it to handle tens of thousands of concurrent network connections effortlessly. Because it strictly enforces simplicity (no inheritance, no complex generics for years), large codebases remain highly readable, which is why Docker, Kubernetes, and Terraform are all written in Go.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Perfect fit for Docker/Kubernetes ecosystems; blazingly fast; easy for new hires to learn quickly.
+* **Cons:** The lack of traditional OOP features (inheritance) and strict error handling (`if err != nil`) can feel verbose and repetitive to developers coming from Java or Python.

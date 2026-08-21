@@ -485,3 +485,68 @@ func (s *Service) Checkout(ctx context.Context, p Payload) {
     s.repo.Save(p)
 }
 ```
+
+
+#### The Outbox Pattern
+> How do you guarantee that a database update and a message queue publish both succeed or both fail?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+By using the Outbox Pattern: you save the database update and the event message to a local "Outbox" table in a single atomic transaction, then use a background worker to publish the event to the queue.
+
+**The Deep Dive:** 
+If a user creates an order, you must update the `Orders` table and publish an `OrderCreated` event to Kafka. If the database succeeds but Kafka is down, the system is permanently corrupted. Distributed Transactions (2PC) are too slow. 
+Instead, you create an `Outbox` table in the *same* database. You open a single SQL transaction, insert the Order into the `Orders` table, and insert the Kafka message into the `Outbox` table. Commit. Because it's one database, it's perfectly atomic. A separate process (like Debezium) constantly polls the `Outbox` table and pushes the rows to Kafka, guaranteeing at-least-once delivery.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Bulletproof data consistency across microservices without the overhead of 2-Phase Commit.
+* **Cons:** Requires consumers of the message queue to be strictly idempotent, because the background worker might crash and publish the exact same message twice.
+
+#### CQRS (Command Query Responsibility Segregation)
+> Why separate read operations from write operations into entirely different models?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Because a data schema optimized for heavy, transactional writes (3rd Normal Form) is completely different from a schema optimized for lightning-fast reads (denormalized JSON).
+
+**The Deep Dive:** 
+In a complex system (like an e-commerce dashboard), writing an order requires complex validation and normalized tables to prevent anomalies. However, rendering the dashboard requires joining 15 tables, which is painfully slow. CQRS completely separates them. The "Command" side writes to a normalized SQL database. It then fires an event. The "Query" side listens to the event and builds a pre-calculated, flat JSON document in ElasticSearch or Redis. When the UI asks for the dashboard, it just fetches the single JSON blob in O(1) time.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Unbelievable read performance; allows scaling reads and writes completely independently.
+* **Cons:** Introduces eventual consistency (the user might write an order, refresh the page, and not see it for 2 seconds); massively increases architectural complexity.
+
+#### Saga Pattern (Choreography vs Orchestration)
+> How do you manage a transaction that spans multiple microservices without using a distributed lock?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Using a Saga, which breaks the distributed transaction into local transactions, relying on compensating actions (rollbacks) if a later step fails.
+
+**The Deep Dive:** 
+Booking a vacation requires flights, hotels, and a rental car (3 different microservices). If the car fails, you must cancel the flight and hotel. 
+* **Choreography:** The Flight service emits an event, the Hotel service hears it and books, emitting another event. There is no central controller. (Good for simple workflows, hard to track).
+* **Orchestration:** A central "Saga Execution Coordinator" (like AWS Step Functions) explicitly tells the Flight service to book. If successful, it tells the Hotel service. If the Car service fails, the Orchestrator explicitly sends a "Cancel" command back to the Flight and Hotel services.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Maintains data consistency across domains without locking databases.
+* **Cons:** "Compensating transactions" are incredibly difficult to write correctly, especially if the compensating action *also* fails (requiring manual human intervention).
+
+#### Backend-For-Frontend (BFF) Pattern
+> Why should a Mobile app and a Web app communicate with different API gateways?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Because mobile screens and desktop screens require vastly different payloads; a BFF creates a custom, optimized API layer for each specific user interface.
+
+**The Deep Dive:** 
+A generalized API (`GET /product/123`) returns a massive JSON blob with 50 fields. The desktop web app uses all 50. The mobile app only has screen space for 5 fields. Sending 45 useless fields over a 3G mobile network drains the battery and destroys latency. 
+Instead of bloating the core microservices with UI-specific logic, you create a "Mobile BFF" (a lightweight NodeJS server). The Mobile App calls the BFF. The BFF calls the internal microservices in parallel, trims the JSON down to exactly the 5 fields needed, and sends it back to the phone.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Optimized payload size and battery life for mobile devices; frontend teams can own their BFFs.
+* **Cons:** Code duplication across different BFFs; creates a new moving part to deploy and monitor.

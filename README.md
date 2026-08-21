@@ -31,6 +31,7 @@ I have kept the original structure of the questions. The repository has been spl
 * [Open Questions](sections/open.md)
 * [Snippets](sections/snippets.md)
 * [Bill Gates Style](sections/billgates.md)
+* [Artificial Intelligence](sections/ai.md)
 
 ## Contributing
 Since many of these questions are open-ended (e.g., "What makes a good language good?"), my answers represent my own experience and perspective. 
@@ -292,6 +293,24 @@ If you have a different approach, a better code example, or want to add nuance t
   * [Telling lies](sections/billgates.md#telling-lies)
   * [Your past self](sections/billgates.md#your-past-self)
 
+* [Questions about Artificial Intelligence (AI) and LLMs](sections/ai.md)
+  * [RAG & Long-Context Models](sections/ai.md#rag--long-context-models)
+  * [Advanced Retrieval (Hybrid Search)](sections/ai.md#advanced-retrieval-hybrid-search)
+  * [Data Ingestion (Chunking)](sections/ai.md#data-ingestion-chunking)
+  * [Re-Ranking](sections/ai.md#re-ranking)
+  * [Caching Strategies](sections/ai.md#caching-strategies)
+  * [Cost & Rate Limiting](sections/ai.md#cost--rate-limiting)
+  * [Connection Management](sections/ai.md#connection-management)
+  * [Agentic Workflows](sections/ai.md#agentic-workflows)
+  * [Tool Calling & Security](sections/ai.md#tool-calling--security)
+  * [Structured Outputs](sections/ai.md#structured-outputs)
+  * [Sampling Parameters](sections/ai.md#sampling-parameters)
+  * [Data Privacy](sections/ai.md#data-privacy)
+  * [Safety & Guardrails](sections/ai.md#safety--guardrails)
+  * [Production Observability](sections/ai.md#production-observability)
+  * [Continuous Evaluation](sections/ai.md#continuous-evaluation)
+  * [Fine-Tuning Trade-offs](sections/ai.md#fine-tuning-trade-offs)
+  * [Scalable Production RAG Architecture](sections/ai.md#scalable-production-rag-architecture)
 
 ## License
 

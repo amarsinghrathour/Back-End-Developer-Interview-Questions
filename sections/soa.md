@@ -198,3 +198,52 @@ func SendEmailMicroservice(user User) {
     kafkaProducer.Publish("email.send", msg)
 }
 ```
+
+
+#### Microservices vs Modular Monoliths
+> Why is the industry seeing a backlash against microservices, and what is a Modular Monolith?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Microservices introduced massive operational complexity (network latency, distributed transactions, deployment hell). A Modular Monolith keeps code in one deployable unit but strictly enforces internal domain boundaries.
+
+**The Deep Dive:** 
+Many startups blindly adopted microservices, resulting in a "Distributed Monolith"—50 services that all deploy together and crash if one fails. The network latency of 10 internal API calls to render a page is catastrophic. 
+A Modular Monolith gives you the best of both worlds. The application compiles to a single binary and uses a single database, eliminating network latency and distributed data issues. However, the code is strictly separated into modules (e.g., `Billing`, `Shipping`) that communicate only through internal public interfaces, never by directly touching another module's database tables. When the company hits massive scale, you can easily extract a clean module into a true microservice.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Radically simpler to debug, test, and deploy; no network latency.
+* **Cons:** Cannot scale different domains independently (e.g., you can't allocate 100 servers to just the `Billing` module).
+
+#### Serverless Architectures (FaaS)
+> When should you use Serverless Functions (AWS Lambda) versus Long-Running Containers (ECS/Kubernetes)?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Use Serverless for highly sporadic, unpredictable workloads or event-driven tasks. Use Containers for high-throughput, consistent web traffic to avoid cold starts and high compute costs.
+
+**The Deep Dive:** 
+AWS Lambda charges you by the millisecond of execution. If you have an endpoint that receives 1 request an hour, a container costs $20/month to sit idle. A Lambda costs $0.00. Furthermore, if you get hit by a Super Bowl ad, AWS will instantly spin up 10,000 Lambdas in 2 seconds to handle it. 
+However, if you have a service constantly processing 5,000 requests per second, 24/7, Lambda becomes astronomically expensive compared to a fixed cluster of containers. You also suffer from "Cold Starts"—the 1-2 second delay when AWS has to boot a brand new Lambda container to handle a new request.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Scale-to-zero pricing; zero infrastructure patching or OS management.
+* **Cons:** Cold start latency; vendor lock-in; extremely difficult to test locally.
+
+#### Event-Driven Architecture (Choreography)
+> What are the dangers of a purely Event-Driven Architecture?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+While it perfectly decouples services, it makes the overall business workflow invisible, turning debugging into a nightmare without sophisticated tracing.
+
+**The Deep Dive:** 
+In an event-driven system, the `Checkout` service publishes an `OrderPlaced` event and immediately returns a success to the user. It has no idea who cares about that event. The `Inventory`, `Shipping`, and `Email` services all react to it. This is perfectly decoupled. 
+The danger: How do you answer the CEO's question, "What happens when an order is placed?" No single piece of code defines the workflow. It only exists as an emergent property of 5 services listening to Kafka. If an order gets stuck, it is incredibly difficult to figure out *which* service failed to react to the event.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Services can be built, scaled, and deployed completely independently.
+* **Cons:** Loss of the "Big Picture" workflow; requires massive investment in distributed tracing and observability.

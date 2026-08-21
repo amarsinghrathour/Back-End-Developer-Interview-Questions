@@ -204,3 +204,69 @@ func WaitFreeAdd(addr *int32, delta int32) {
     atomic.AddInt32(addr, delta) // Hardware handles serialization
 }
 ```
+
+
+#### Virtual Threads (Java 21) & Goroutines
+> How do Virtual Threads (or Goroutines) solve the C10K problem better than OS Threads?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+They decouple the execution context from heavy Operating System threads, allowing the runtime to multiplex millions of lightweight user-space threads onto a small pool of OS threads.
+
+**The Deep Dive:** 
+An OS thread requires ~1MB of memory and expensive kernel context switches. If a server has 8GB of RAM, it can only spawn ~8,000 OS threads before crashing. When an OS thread blocks (e.g., waiting for a database response), the CPU core sits idle. 
+Goroutines (Go) and Virtual Threads (Java 21) are managed by the language runtime. They only require a few kilobytes of RAM. When a Virtual Thread makes a blocking database call, the runtime intercepts it, parks the Virtual Thread on the heap, and assigns the underlying OS thread to a different Virtual Thread. This allows a server to effortlessly handle millions of concurrent blocking I/O connections.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Massive scalability for I/O bound workloads using standard, easy-to-read synchronous code (no callback hell).
+* **Cons:** They do not speed up CPU-bound workloads (like video encoding); if a virtual thread runs a heavy CPU loop, it can starve other threads (though Go preempts them).
+
+#### Lock-Free Data Structures (CAS)
+> What are lock-free data structures and how do they use Compare-And-Swap (CAS)?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Lock-free data structures avoid slow OS-level mutexes by using atomic CPU instructions (CAS) to update variables, ensuring threads never block each other.
+
+**The Deep Dive:** 
+Using a standard Mutex to protect a counter forces all other threads to sleep (a heavy OS operation). Lock-free structures use the CPU's hardware-level Compare-And-Swap instruction. The logic is a `while` loop: 
+1. Read the current value (e.g., 5).
+2. Calculate the new value (e.g., 6).
+3. CAS: "Update this memory location to 6, *only if* the value is still exactly 5."
+If another thread sneaked in and changed it to 6, the CAS fails, and our thread loops back to step 1. Because this happens at the hardware level without OS involvement, it is blistering fast under high contention.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Prevents deadlocks; dramatically higher throughput for concurrent access.
+* **Cons:** Incredibly difficult to write correctly (ABA problem, memory ordering issues); high CPU usage (spinning) under extreme contention.
+
+#### The Actor Model
+> Why use the Actor Model (Erlang/Akka) instead of traditional thread-based concurrency?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+The Actor Model eliminates shared state entirely. Concurrency is handled by independent "Actors" that only communicate by sending asynchronous messages to each other.
+
+**The Deep Dive:** 
+In traditional concurrency, 10 threads try to mutate the same shared object in memory, requiring complex locks. In the Actor Model, state is strictly private. If you want an Actor to update its state, you send a message to its "mailbox." The Actor processes one message at a time, sequentially. Because an Actor never shares memory and never runs in parallel with itself, you don't need any locks. Furthermore, Actors can send messages to Actors on completely different physical servers, making distributed concurrency seamless.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Completely eliminates race conditions and deadlocks; natural fit for distributed systems.
+* **Cons:** Requires a massive paradigm shift in how you architect software; asynchronous messaging makes debugging and tracing very difficult.
+
+#### False Sharing in Multicore CPUs
+> What is False Sharing and how does it cripple concurrent performance?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+False sharing occurs when two threads on different CPU cores constantly modify independent variables that happen to reside on the same CPU Cache Line, destroying performance.
+
+**The Deep Dive:** 
+CPUs fetch memory in chunks called "Cache Lines" (usually 64 bytes). If `VarA` and `VarB` are located next to each other in memory, they load into the same cache line. If Thread 1 (on Core 1) modifies `VarA`, the CPU marks the *entire* cache line as invalid. Even though Thread 2 (on Core 2) only cares about `VarB`, its cache is invalidated, forcing it to fetch from slow main memory. They end up playing a game of "cache ping-pong," tanking performance. The fix is to add "padding" (dummy variables) between `VarA` and `VarB` so they reside on different cache lines.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros (of fixing):** Restores linear scaling to highly concurrent systems.
+* **Cons:** Requires intimate knowledge of hardware and language-specific memory layouts; padding wastes a small amount of RAM.

@@ -292,3 +292,67 @@ ALTER TABLE users ADD COLUMN given_name VARCHAR(255);
 -- while both Blue and Green apps are actively receiving traffic.
 CREATE TRIGGER sync_names BEFORE INSERT OR UPDATE ON users...
 ```
+
+
+#### Distributed SQL (NewSQL)
+> How do Distributed SQL databases like CockroachDB or Google Spanner achieve horizontal scale without losing ACID guarantees?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+They shard data geographically but use advanced consensus protocols (like Raft) and synchronized atomic clocks (TrueTime) to guarantee strict consistency across shards.
+
+**The Deep Dive:** 
+Traditional SQL (Postgres) is single-writer. NoSQL (Cassandra) is multi-writer but sacrifices ACID. Distributed SQL splits the difference. When you insert a row, the database determines which geographic shard should own it. It uses the Raft consensus algorithm, requiring a majority of replicas (e.g., 2 out of 3) to acknowledge the write before returning success. To prevent distributed transaction conflicts (where clocks drift on different servers), Spanner uses atomic clocks and GPS receivers to ensure absolute global time ordering.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** The holy grail—developer-friendly SQL with the infinite scale and survivability of NoSQL.
+* **Cons:** The consensus network hops make write latency significantly higher than a traditional single-node Postgres database.
+
+#### Change Data Capture (CDC)
+> Why is Change Data Capture (CDC) replacing traditional dual-writes in microservice architectures?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Dual-writing to a database and a message queue causes inconsistencies if one fails. CDC reads the database's internal transaction log, guaranteeing 100% accurate event emission.
+
+**The Deep Dive:** 
+If an application saves a user to Postgres and then publishes a "UserCreated" event to Kafka, the network might drop the Kafka message *after* the DB commit. The systems are now permanently out of sync. 
+CDC tools (like Debezium) solve this. The application *only* writes to Postgres. Debezium tails the Postgres Write-Ahead Log (WAL) at the filesystem level. When it sees the commit, Debezium publishes the event to Kafka. If Kafka goes down, Debezium waits and resumes from where it left off, guaranteeing eventual delivery without application-level complexity.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Absolute data consistency; completely decouples event publishing from business logic.
+* **Cons:** Complex infrastructure to set up (requires Kafka, Debezium, Kafka Connect) and requires careful handling of schema evolution.
+
+#### Database Connection Pooling at Scale
+> How do serverless architectures (like AWS Lambda) break traditional database connection pools, and how do you fix it?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Serverless functions scale massively and instantly, exhausting the database's connection limits. You fix it by placing a connection proxy (like PgBouncer or AWS RDS Proxy) between them.
+
+**The Deep Dive:** 
+A traditional monolith maintains a pool of 50 persistent connections to Postgres. If you migrate to AWS Lambda and receive a spike of 10,000 concurrent requests, AWS spins up 10,000 Lambda containers. Each container opens a new connection to Postgres. Postgres spends all its CPU trying to manage 10,000 connections and instantly crashes. 
+The solution is a proxy layer (PgBouncer). All 10,000 Lambdas connect to the proxy (which is lightweight). The proxy multiplexes those 10,000 requests over a safe pool of 200 persistent connections to the actual database.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Prevents serverless autoscaling from DDOSing your relational database.
+* **Cons:** Adds a network hop (minor latency) and introduces a new single point of failure that must be clustered.
+
+#### MVCC (Multi-Version Concurrency Control)
+> How does MVCC allow databases to avoid locking tables during concurrent reads and writes?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+MVCC creates hidden versions of rows so that "readers never block writers, and writers never block readers."
+
+**The Deep Dive:** 
+If a transaction starts updating a million rows, traditional databases would lock the table, forcing all read queries to wait (causing downtime). With MVCC (used in Postgres), the database doesn't overwrite the old row; it inserts a *new* version of the row with a higher transaction ID. 
+When a read query arrives, it looks at the timestamp. It ignores the uncommitted new rows and safely reads the old rows. Both transactions proceed at full speed without waiting. Later, a background process ("Vacuuming" in Postgres) cleans up the dead rows once no active transactions need them.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Massive throughput for highly concurrent environments; read queries are blisteringly fast because they don't wait for locks.
+* **Cons:** Updates cause "bloat" (wasted disk space) until the garbage collection (vacuum) reclaims it, which can cause CPU spikes.

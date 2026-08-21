@@ -330,3 +330,65 @@ func IssueSessionCookie(w http.ResponseWriter, sessionID string) {
     http.SetCookie(w, cookie)
 }
 ```
+
+
+#### Zero Trust Architecture
+> What does "Zero Trust" actually mean in a corporate network context?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+It means assuming the internal network is already compromised; therefore, every single request between servers must be explicitly authenticated and authorized, not just traffic coming from the outside.
+
+**The Deep Dive:** 
+Historically, companies used a "Castle-and-Moat" architecture (VPNs). If you were outside, you were blocked. If you got past the firewall (into the castle), you had access to everything. Zero Trust assumes the moat is useless. Under Zero Trust, if the internal `BillingService` calls the internal `UserService`, the `UserService` rejects it unless the request contains a cryptographic identity token (mTLS or JWT) proving it is authorized to make that specific call. Location (being on the internal IP subnet) implies zero trust.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Massively limits the blast radius of a hack. If a hacker breaches a web server, they cannot move laterally to the database.
+* **Cons:** Requires immense infrastructure (Public Key Infrastructure, Service Meshes) to constantly rotate and validate identity certificates between thousands of microservices.
+
+#### JWT (JSON Web Tokens) vs Stateful Sessions
+> Why did the industry move to JWTs for APIs, and what are their massive security flaws?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+JWTs are stateless, meaning the server doesn't need to look up a session in a database, allowing infinite horizontal scaling. However, they cannot be reliably revoked before they expire.
+
+**The Deep Dive:** 
+In Stateful Sessions, the server stores a session ID in Redis. Every API call requires querying Redis (adding latency). A JWT is a cryptographically signed JSON blob containing the user's ID. The server simply verifies the math of the signature (no database lookup required). 
+The flaw: Because the server doesn't store state, if a hacker steals a JWT, the server *cannot* revoke it. Even if the user changes their password, the stolen JWT remains valid until its built-in expiration time hits. The fix is keeping JWT lifetimes extremely short (e.g., 5 minutes) and using long-lived Refresh Tokens to fetch new ones.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Perfect for stateless microservices; fast to validate.
+* **Cons:** Revocation is practically impossible without introducing a "blacklist" in a database, which completely defeats the purpose of being stateless.
+
+#### OWASP Top 10: Broken Access Control (IDOR)
+> What is Insecure Direct Object Reference (IDOR) and why is it so common in REST APIs?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+IDOR occurs when an API endpoint uses an ID in the URL to fetch data but fails to check if the currently logged-in user actually owns that ID.
+
+**The Deep Dive:** 
+A developer writes `GET /api/receipts/{id}`. The code fetches the receipt from the database and returns it. User A logs in and their frontend requests `/api/receipts/10`. User A then manually changes the URL to `/api/receipts/11`. Because the backend only checked *if* the user was logged in (Authentication) but forgot to check if the user *owned* receipt #11 (Authorization), User A just stole User B's financial data. It is the #1 vulnerability on the internet because automated security scanners cannot easily detect business-logic ownership rules.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros (of fixing):** Protects PII and prevents catastrophic data breaches.
+* **Cons:** Requires rigorous, tedious authorization checks on literally every single API endpoint that accepts a parameter.
+
+#### Cross-Site Request Forgery (CSRF) in the API Era
+> Are CSRF attacks still relevant if you are building a React SPA with a JSON REST API?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+CSRF is mostly dead if your API uses standard Authorization headers (like Bearer tokens), but it is still highly relevant if your API relies on browser Cookies for authentication.
+
+**The Deep Dive:** 
+CSRF works because browsers automatically attach Cookies to every request sent to a domain, even if the request was secretly triggered by a malicious website in another tab. If your React app stores the session token in `localStorage` and manually attaches it as an `Authorization: Bearer <token>` header, CSRF is mathematically impossible (the malicious tab cannot read your `localStorage`). However, storing tokens in `localStorage` opens you up to XSS (Cross-Site Scripting). If you use `HttpOnly` cookies to defeat XSS, you must implement strict `SameSite` cookie attributes or anti-CSRF tokens to prevent CSRF.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros (Cookies):** Immune to XSS stealing the token; vulnerable to CSRF.
+* **Pros (Local Storage):** Immune to CSRF; vulnerable to XSS. (Most modern architectures prefer `HttpOnly` Cookies with `SameSite=Strict`).

@@ -189,3 +189,68 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
     tmpl.Execute(w, user) 
 }
 ```
+
+
+#### Server-Side Rendering (SSR) vs Client-Side Rendering (CSR)
+> Why are modern web frameworks (like Next.js) shifting back from pure React SPAs to Server-Side Rendering?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+To fix the massive SEO penalties and slow First Contentful Paint (FCP) issues caused by forcing the user's phone to download and execute megabytes of JavaScript before rendering the UI.
+
+**The Deep Dive:** 
+A pure Client-Side SPA (Single Page Application) sends an empty HTML file (`<div id="root"></div>`) to the browser, followed by 2MB of JavaScript. The browser parses the JS, hits an API, waits for JSON, and finally renders the page. On a slow 3G phone, the user stares at a blank white screen for 5 seconds. Google's web crawler might see nothing. 
+SSR (Next.js) renders the React components into fully populated HTML on the *server* and sends that down instantly. The user sees the page in milliseconds. The JavaScript then loads in the background to make the page interactive (Hydration).
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Incredible SEO; blazingly fast perceived load times.
+* **Cons:** Requires a NodeJS server running 24/7, destroying the cheap "static hosting" dream of pure SPAs; introduces complex caching challenges.
+
+#### WebSockets vs Server-Sent Events (SSE)
+> If you need to stream live stock prices to a browser, should you use WebSockets or Server-Sent Events?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Use Server-Sent Events (SSE) because stock prices are a one-way stream of data from the server to the client. WebSockets are overkill unless you need bi-directional communication.
+
+**The Deep Dive:** 
+WebSockets open a persistent, bi-directional TCP connection. They are required for multiplayer games or chat apps where the user is constantly sending data *back* to the server. 
+SSE works over standard HTTP/1.1 or HTTP/2. The browser makes a normal GET request, and the server simply keeps the connection open, pushing text data down whenever it wants. Because SSE uses standard HTTP, it automatically works with existing load balancers, corporate firewalls, and HTTP/2 multiplexing, whereas WebSockets often require special load balancer configuration (connection upgrades).
+
+**The Trade-offs (Pros/Cons):**
+* **Pros (SSE):** Simpler to implement; native browser auto-reconnection; firewall friendly.
+* **Cons (SSE):** Strictly unidirectional (server to client only).
+
+#### HTMX & The Return to HTML
+> What is HTMX, and why is it gaining traction as an alternative to massive JavaScript frameworks?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+HTMX allows developers to build modern, dynamic, SPA-like experiences by sending HTML fragments directly from the server, eliminating the need for complex JSON APIs and React state management.
+
+**The Deep Dive:** 
+Over the last decade, backend developers were forced to build JSON REST APIs solely to feed React frontends. HTMX argues this is a mistake. With HTMX, a button click (`<button hx-post="/like">`) sends a request to the server. The server (written in Go, Python, or Ruby) updates the database and returns a tiny snippet of raw HTML: `<span>5 Likes</span>`. HTMX takes that HTML and swaps it into the DOM instantly. 
+This allows backend engineers to build highly interactive web apps entirely in their language of choice without writing a single line of custom JavaScript.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Massively reduces codebase complexity; eliminates the need for duplicated state management on the client.
+* **Cons:** Not suitable for highly complex offline applications or heavy canvas/WebGL games; splits UI rendering logic across backend templates.
+
+#### HTTP/3 & QUIC
+> Why is HTTP/3 replacing HTTP/2, and how does it solve the "Head-of-Line Blocking" problem?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+HTTP/3 replaces TCP with a new transport protocol called QUIC (built on UDP) to fix TCP's fatal flaw: Head-of-Line blocking over spotty mobile networks.
+
+**The Deep Dive:** 
+HTTP/2 allowed a browser to download 10 images over a single TCP connection simultaneously (multiplexing). However, TCP guarantees ordered delivery. If the very first packet of Image 1 is dropped by a bad cell tower, TCP pauses the entire connection, waiting for that one packet to be retransmitted, even if the packets for Images 2-10 have already arrived. This is Head-of-Line blocking. 
+HTTP/3 uses QUIC (over UDP). If a packet for Image 1 is lost, Image 1 is delayed, but Images 2-10 finish downloading instantly because the streams are completely independent at the transport layer.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Drastically improves web performance on unstable mobile networks (subways, driving).
+* **Cons:** UDP is sometimes blocked or throttled by aggressive corporate firewalls; requires high CPU usage for user-space cryptography.

@@ -527,3 +527,68 @@ func FindDuplicates(files []File) {
     }
 }
 ```
+
+
+#### Rate Limiting (Token Bucket vs Leaky Bucket)
+> Compare Token Bucket and Leaky Bucket algorithms for API rate limiting. When would you use which?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Token Bucket allows bursts of traffic up to a maximum limit, while Leaky Bucket smooths traffic into a steady, constant outbound rate.
+
+**The Deep Dive:** 
+In Token Bucket (e.g., Stripe's API), tokens are added to a bucket at a fixed rate. If a user has a burst of requests, they can consume all tokens instantly, processing the burst quickly. In Leaky Bucket (e.g., NGINX default), requests pour in but leak out (are processed) at a strictly constant rate. If the bucket is full, new requests overflow and are dropped (HTTP 429). 
+* Use Token Bucket when you want to absorb sudden spikes (e.g., a user logging in and loading 5 dashboard widgets simultaneously).
+* Use Leaky Bucket when you must protect downstream legacy systems that will crash if they receive more than exactly X requests per second.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros (Token):** More flexible and forgiving for end-users.
+* **Cons (Leaky):** Can artificiality delay valid requests during minor spikes.
+
+#### Geo-Spatial Hashing (Geohash)
+> How do Geohashes work for spatial proximity searches (like Uber or Tinder)?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Geohashing converts 2D latitude and longitude coordinates into a 1D string of characters, where matching prefixes indicate physical proximity.
+
+**The Deep Dive:** 
+Finding drivers near a user using raw latitude/longitude requires computing the Haversine formula against every driver in the database (O(N)), which is too slow. Geohashing divides the world into a grid. For example, the string "9q8yy" represents San Francisco. The longer the string, the smaller the grid (more precise). To find nearby drivers, you simply do a string prefix search (`WHERE geohash LIKE '9q8yy%'`), which leverages B-Tree indexes for O(log N) lookups.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Blazing fast indexing and retrieval of spatial data using standard databases (Redis/Postgres).
+* **Cons:** Edge cases occur at the grid boundaries (two points can be 1 meter apart but have completely different Geohash prefixes).
+
+#### Consistent Hashing & Data Hotspots
+> Consistent hashing distributes data evenly, but what happens when a specific key (like a viral celebrity's profile) becomes a massive hotspot?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Consistent hashing routes all traffic for a specific key to a single node. To mitigate a viral hotspot, you must salt the key or use a dedicated CDN/L1 cache.
+
+**The Deep Dive:** 
+Consistent hashing guarantees `hash("JustinBieberProfile")` always hits Node A. If that profile goes viral, Node A gets 100,000 RPS while Nodes B, C, and D sit idle. This is a "hot key" issue. The algorithm itself cannot fix this. You must solve it at the application layer by either:
+1. Adding a short-lived local cache (L1 cache) in the memory of the web servers before it hits the distributed cache.
+2. "Salting" the key: appending a random number (1-10) to the key so it distributes across 10 different nodes, though this requires the client to aggregate the data later.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Prevents single-node meltdowns during viral events.
+* **Cons:** Salting drastically increases read complexity.
+
+#### Bloom Filters in Distributed Systems
+> Why are Bloom Filters so prevalent in distributed databases like Cassandra?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Bloom Filters are highly memory-efficient probabilistic data structures used to quickly determine if a piece of data is *definitely not* present on a disk, saving expensive disk I/O reads.
+
+**The Deep Dive:** 
+In LSM-Tree databases like Cassandra, data is scattered across many immutable files (SSTables) on disk. When querying for a specific row, opening and reading every file would be disastrously slow. Instead, Cassandra keeps a small Bloom Filter in RAM for every SSTable. When queried, the Bloom Filter can return "Absolutely Not Here" (so the DB skips the file) or "Possibly Here" (so the DB reads the disk). This eliminates 99% of unnecessary disk I/O.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Astronomically faster reads; extremely small memory footprint.
+* **Cons:** Cannot return a definite "Yes" (false positives occur); you cannot remove elements from a standard Bloom Filter.

@@ -342,3 +342,67 @@ func ExecuteSaga() error {
     return nil // Entire distributed transaction succeeded
 }
 ```
+
+
+#### Consensus Algorithms (Raft vs Paxos)
+> Why did Raft largely replace Paxos as the standard for distributed consensus?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+While both guarantee strict consistency across a cluster, Raft was explicitly designed to be understandable and implementable, whereas Paxos is notoriously complex and theoretical.
+
+**The Deep Dive:** 
+In a distributed database, if 3 nodes need to agree on a value (Consensus), they need an algorithm. Paxos was the academic standard but was so difficult to understand that almost every real-world implementation had subtle, catastrophic bugs. Raft solved this by prioritizing "understandability." It breaks the problem into distinct, easy-to-code phases: Leader Election, Log Replication, and Safety. Today, Raft powers etcd (Kubernetes), Consul, and CockroachDB.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros (Raft):** Developer-friendly; easier to debug and prove correct in production.
+* **Cons:** Neither algorithm performs well across high-latency global WANs due to the strict quorum requirements (requiring multiple round-trips).
+
+#### Distributed Tracing & OpenTelemetry
+> Why is Distributed Tracing critical in microservices, and how does OpenTelemetry help?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Without distributed tracing, debugging a failure across 15 microservices is impossible. OpenTelemetry provides an open standard for injecting and passing trace IDs across network boundaries.
+
+**The Deep Dive:** 
+In a monolith, a stack trace tells you exactly where an error occurred. In microservices, a user clicks "Checkout," which hits the API Gateway, then the Order Service, then the Payment Service, then fails. You have 3 separate log files. 
+Distributed tracing generates a unique `TraceID` at the Gateway and injects it into the HTTP headers of every downstream request. All services log this `TraceID`. Tools like Jaeger or DataDog then stitch these logs together into a visual waterfall graph, showing exactly which service caused the latency or error.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Turns blind, distributed chaos into observable, debuggable systems.
+* **Cons:** High storage cost (often requires sampling only 1% of traces); requires instrumenting every single codebase in the company.
+
+#### Idempotency in Distributed Systems
+> Why is idempotency mandatory for distributed APIs, and how do you implement it?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Because network calls can fail *after* succeeding on the server but *before* the client receives the response, causing clients to retry and accidentally execute actions twice.
+
+**The Deep Dive:** 
+If a mobile app sends `POST /charge $50`, the server charges the card, but the Wi-Fi drops before the `200 OK` arrives. The app retries. If the API is not idempotent, the user is charged $100. 
+To fix this, the client generates a unique `Idempotency-Key` (a UUID) and sends it in the header. The server checks a fast cache (Redis). If it has seen the key before, it returns the cached response without charging the card again. If not, it processes the charge and saves the key.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Prevents catastrophic data corruption and double-billing.
+* **Cons:** Adds complexity to the server (managing the lifecycle and storage of idempotency keys).
+
+#### The CAP Theorem in Practice
+> How do modern databases bypass the hard limitations of the CAP theorem?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+They don't bypass it, but they offer tunable consistency, allowing developers to choose between Consistency (C) and Availability (A) on a per-query basis.
+
+**The Deep Dive:** 
+The CAP theorem states you can only have two of Consistency, Availability, and Partition Tolerance. Since network partitions (P) are inevitable, you must choose C or A. 
+Modern databases (like Cassandra or CosmosDB) allow you to tune this. If you are writing financial data, you configure the query to require a strict Quorum (Consistency), meaning the query will fail (sacrificing Availability) if nodes are down. If you are writing a Facebook "Like," you configure it to write to just one node (Availability), meaning other users might not see the Like instantly (sacrificing Consistency).
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Unmatched flexibility for different business requirements within the same database.
+* **Cons:** Places the immense burden of reasoning about distributed state and conflict resolution directly onto the application developer.

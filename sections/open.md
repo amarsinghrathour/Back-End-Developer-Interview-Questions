@@ -366,3 +366,65 @@ defer resp.Body.Close() // I added this one line!
 import _ "net/http/pprof"
 // go tool pprof http://localhost:8080/debug/pprof/heap
 ```
+
+
+#### The Shift Away from Open Source (BSL/SSPL)
+> Why are companies like Redis, Elastic, and HashiCorp changing their licenses away from true Open Source?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+To prevent massive cloud providers (like AWS) from taking their free software, repackaging it as a managed service, and taking all the revenue without contributing back.
+
+**The Deep Dive:** 
+For years, companies built powerful open-source tools (Elasticsearch, Redis, Terraform) using the permissive Apache or MIT licenses. AWS would then offer "Amazon Elasticsearch Service," making billions while the creators struggled to monetize. To survive, these companies shifted to licenses like the Server Side Public License (SSPL) or Business Source License (BSL). These licenses keep the code "source-available" (free for users to read and run), but explicitly ban competitors from offering the software as a managed cloud service.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Ensures the financial survival of the companies actually building the software.
+* **Cons:** Fractures the community (leading to massive open-source forks like OpenSearch or OpenTofu); enterprise legal teams often ban the use of BSL software, stifling adoption.
+
+#### Open Source Supply Chain Attacks
+> How do attackers compromise open source projects, and how do companies defend against it?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+Attackers inject malicious code into heavily downloaded NPM or PyPI packages, compromising every company that installs them. Defense requires SBOMs (Software Bill of Materials) and strict dependency locking.
+
+**The Deep Dive:** 
+Modern applications rely on thousands of open-source dependencies. If an attacker gains access to a popular package maintainer's GitHub account (via phishing or leaked credentials), they publish a new version containing a backdoor. Millions of CI pipelines auto-download the "update," and the attackers gain access to thousands of corporate networks (e.g., the `event-stream` or `xz-utils` hacks). 
+To defend, companies generate an SBOM (a cryptographic inventory of every library used), use tools like Dependabot to scan for known CVEs, and strictly lock dependency versions so malicious updates aren't auto-downloaded.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Drastically reduces the attack surface of the software supply chain.
+* **Cons:** Constant maintenance burden to manually review, test, and upgrade third-party dependencies safely.
+
+#### InnerSource
+> What is "InnerSource" and why are large enterprises adopting it?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+InnerSource applies the culture and tooling of the Open Source community (pull requests, transparent discussions, shared ownership) entirely within the private walls of a corporation.
+
+**The Deep Dive:** 
+In traditional enterprises, code is heavily siloed. If Team A needs a feature in Team B's API, they submit a Jira ticket and wait 6 months. With InnerSource, all company code is readable by all employees. Team A simply forks Team B's repository, writes the feature themselves, and submits a Pull Request. Team B reviews it and merges it. This breaks down silos, accelerates development, and fosters a collaborative culture identical to how Linux or Kubernetes is built, but kept strictly proprietary.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros:** Massively reduces cross-team bottlenecks and duplicates effort; improves code quality via wider peer review.
+* **Cons:** Requires a massive cultural shift; middle managers often resist losing absolute control over their codebases.
+
+#### The AI Copyright Dilemma
+> How is Generative AI threatening the foundations of Open Source licensing?
+
+**Expert Answer:**
+
+**The Short Answer:** 
+AI models (like GitHub Copilot) are trained on billions of lines of Open Source code, but often reproduce snippets without adhering to the required attribution licenses (like GPL), sparking massive legal battles.
+
+**The Deep Dive:** 
+Open Source is built on copyright law. A GPL license explicitly says: "You can use this code, *but* you must make your derivative project open-source too." LLMs ingest this code and then spit out near-identical functions to enterprise developers building proprietary, closed-source software. This arguably violates the open-source license. The tech industry is currently fighting over whether training an AI on licensed code constitutes "Fair Use" or massive copyright infringement.
+
+**The Trade-offs (Pros/Cons):**
+* **Pros (of AI training):** Produces powerful tools that make all developers faster.
+* **Cons:** Threatens the social contract of Open Source; developers may stop publishing code publicly if they know mega-corporations will scrape it for profit without attribution.
